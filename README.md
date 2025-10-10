@@ -1,0 +1,11 @@
+My app helps users manage their medications by tracking when and how to take them, making their process much safer and less likely of accidents. The app itself is divided into 5 main parts: Add Medication, Current Medications, History/Emergency Info, Calendar, and Log Medication.
+
+In the Add Medication Page, users can register or log in to add medicines to their personal list. Each medication can be labeled by type (tablet, capsule, liquid, injection, etc.) with their own written instructions for safe use. Users can also choose flexible scheduling options for them, such as daily intervals, titration schedules, or specific start and end dates. Users can also specify dates when they plan to not take a medication, preventing unnecessary reminders. These details listed are used throughout the app to generate accurate alerts and help with inventory tracking.
+
+The Current Medications page provides a clear overview of all of their current medications. Users can view their medicine dosage, remaining supply, their medication end date, and the time of their next dose. If they choose to stop taking a medicine, they can remove the medicine from their list anytime.
+
+The History/Emergency Info Page keeps a record of all medications previously taken, including dosage and amount. Users can use this to share accurate information with their healthcare providers. The Emergency info section of the page lets users store contacts and addresses for urgent situations, showing who to call, how to reach them, and where to go in dire circumstances.
+
+The Calendar page offers a monthly overview, displaying each medication with color-coded dots representing doses per day. For instance, if a medicine was to be taken 3 times a day, then the Calendar will show 3 dots for that specific medicine from their start to end date inclusively. This feature helps users know when to take medicine and to plan for it in the future if they ever are going somewhere.
+
+When it's time for a dose, the app sends IOS notifications reminding users to take their medicine. Clicking the reminder sends them to the Log Medication page, where they will be where they can record that they took it, with dosage instructions and remaining quantity shown. In addition, if a user's supply is running low, the app automatically warns them to restock.
