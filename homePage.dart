@@ -243,7 +243,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-            // Today's Medications Bar
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               padding: const EdgeInsets.all(16),
@@ -346,12 +345,10 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-            // Menu Cards - REORDERED
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  // 1. Current Medications (First)
                   _buildMenuCard(
                     context,
                     title: 'Current Medications / Info.',
@@ -368,7 +365,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 2. Calendar (Second)
                   _buildMenuCard(
                     context,
                     title: 'Calendar',
@@ -385,7 +381,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 3. Add Medication (Third)
                   _buildMenuCard(
                     context,
                     title: 'Add Medication',
@@ -397,14 +392,11 @@ class _HomePageState extends State<HomePage> {
                           builder: (context) =>
                               AddMedicationPage(userId: widget.userId),
                         ),
-                      ).then(
-                        (_) => _loadTodaysMedications(),
-                      ); // Refresh after adding
+                      ).then((_) => _loadTodaysMedications());
                     },
                   ),
                   const SizedBox(height: 16),
 
-                  // 4. History / Emergency Info (Last)
                   _buildMenuCard(
                     context,
                     title: 'History / Emergency Info.',

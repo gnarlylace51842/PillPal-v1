@@ -86,7 +86,6 @@ def add_medication():
     
     user_id = data.get('user_id')
     
-    # Convert pills_remaining to integer, default to 0 if empty
     pills_remaining = data.get('pills_remaining', '0')
     if pills_remaining == '' or pills_remaining is None:
         pills_remaining = 0
@@ -108,7 +107,7 @@ def add_medication():
         'start_date': data.get('start_date'),
         'end_date': data.get('end_date'),
         'skip_dates': data.get('skip_dates'),
-        'pills_remaining': pills_remaining,  # NOW SAVING AS INTEGER
+        'pills_remaining': pills_remaining,
         'created_at': time.time()
     }
     
@@ -261,13 +260,11 @@ def log_medication():
     user_id = data.get('user_id')
     
     try:
-        # Get the medication
         medication = medications_collection.find_one({'_id': ObjectId(medication_id)})
         
         if not medication:
             return jsonify({'error': 'Medication not found'}), 404
         
-        # Decrement pill count
         current_pills = int(medication.get('pills_remaining', 0))
         if current_pills > 0:
             medications_collection.update_one(
@@ -275,7 +272,6 @@ def log_medication():
                 {'$set': {'pills_remaining': current_pills - 1}}
             )
         
-        # Log to history
         history_collection = db.medication_history
         history_record = {
             'user_id': user_id,
@@ -308,13 +304,11 @@ def mark_medication_taken():
     doses_per_day = data.get('doses_per_day', 1)
     
     try:
-        # Get the medication
         medication = medications_collection.find_one({'_id': ObjectId(medication_id)})
         
         if not medication:
             return jsonify({'error': 'Medication not found'}), 404
         
-        # Decrement pill count by doses per day
         current_pills = int(medication.get('pills_remaining', 0))
         new_count = max(0, current_pills - doses_per_day)
         
@@ -323,7 +317,6 @@ def mark_medication_taken():
             {'$set': {'pills_remaining': new_count}}
         )
         
-        # Log to history
         history_collection = db.medication_history
         history_record = {
             'user_id': user_id,
