@@ -78,12 +78,23 @@ def login():
 
 @app.route('/add_medication', methods=['POST'])
 def add_medication():
+    """Add medication for a specific user"""
     data = request.get_json()
     
     if not data or not data.get('user_id'):
         return jsonify({'error': 'User ID is required'}), 400
     
     user_id = data.get('user_id')
+    
+    # Convert pills_remaining to integer, default to 0 if empty
+    pills_remaining = data.get('pills_remaining', '0')
+    if pills_remaining == '' or pills_remaining is None:
+        pills_remaining = 0
+    else:
+        try:
+            pills_remaining = int(pills_remaining)
+        except (ValueError, TypeError):
+            pills_remaining = 0
     
     medication_data = {
         'user_id': user_id,
@@ -97,6 +108,7 @@ def add_medication():
         'start_date': data.get('start_date'),
         'end_date': data.get('end_date'),
         'skip_dates': data.get('skip_dates'),
+        'pills_remaining': pills_remaining,  # NOW SAVING AS INTEGER
         'created_at': time.time()
     }
     
@@ -113,6 +125,7 @@ def add_medication():
 
 @app.route('/get_medications/<user_id>', methods=['GET'])
 def get_medications(user_id):
+    """Get all medications for a specific user"""
     try:
         medications = list(medications_collection.find({'user_id': user_id}))
         
@@ -128,6 +141,7 @@ def get_medications(user_id):
 
 @app.route('/delete_medication/<medication_id>', methods=['DELETE'])
 def delete_medication(medication_id):
+    """Delete a specific medication"""
     try:
         result = medications_collection.delete_one({'_id': ObjectId(medication_id)})
         
@@ -141,6 +155,7 @@ def delete_medication(medication_id):
 
 @app.route('/get_medication_history/<user_id>', methods=['GET'])
 def get_medication_history(user_id):
+    """Get medication history for a specific user"""
     try:
         history_collection = db.medication_history
         history = list(history_collection.find({'user_id': user_id}))
@@ -155,6 +170,7 @@ def get_medication_history(user_id):
 
 @app.route('/delete_history_record/<record_id>', methods=['DELETE'])
 def delete_history_record(record_id):
+    """Delete a specific history record"""
     try:
         history_collection = db.medication_history
         result = history_collection.delete_one({'_id': ObjectId(record_id)})
@@ -169,6 +185,7 @@ def delete_history_record(record_id):
 
 @app.route('/get_emergency_info/<user_id>', methods=['GET'])
 def get_emergency_info(user_id):
+    """Get emergency info for a specific user"""
     try:
         emergency_collection = db.emergency_info
         info = emergency_collection.find_one({'user_id': user_id})
@@ -184,6 +201,7 @@ def get_emergency_info(user_id):
 
 @app.route('/save_emergency_info', methods=['POST'])
 def save_emergency_info():
+    """Save or update emergency info for a user"""
     data = request.get_json()
     
     if not data or not data.get('user_id'):
@@ -218,6 +236,7 @@ def save_emergency_info():
 
 @app.route('/get_medication/<medication_id>', methods=['GET'])
 def get_medication(medication_id):
+    """Get a single medication by ID"""
     try:
         medication = medications_collection.find_one({'_id': ObjectId(medication_id)})
         
@@ -232,6 +251,7 @@ def get_medication(medication_id):
 
 @app.route('/log_medication', methods=['POST'])
 def log_medication():
+    """Log that a medication was taken and decrement pill count"""
     data = request.get_json()
     
     if not data or not data.get('medication_id'):
@@ -241,18 +261,21 @@ def log_medication():
     user_id = data.get('user_id')
     
     try:
+        # Get the medication
         medication = medications_collection.find_one({'_id': ObjectId(medication_id)})
         
         if not medication:
             return jsonify({'error': 'Medication not found'}), 404
         
+        # Decrement pill count
         current_pills = int(medication.get('pills_remaining', 0))
         if current_pills > 0:
             medications_collection.update_one(
                 {'_id': ObjectId(medication_id)},
-                {'$set': {'pills_remaining': str(current_pills - 1)}}
+                {'$set': {'pills_remaining': current_pills - 1}}
             )
         
+        # Log to history
         history_collection = db.medication_history
         history_record = {
             'user_id': user_id,
@@ -267,6 +290,54 @@ def log_medication():
         return jsonify({
             'message': 'Medication logged successfully',
             'pills_remaining': current_pills - 1
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/mark_medication_taken', methods=['POST'])
+def mark_medication_taken():
+    """Mark a medication as taken for today and decrement pills"""
+    data = request.get_json()
+    
+    if not data or not data.get('medication_id') or not data.get('user_id'):
+        return jsonify({'error': 'Medication ID and User ID are required'}), 400
+    
+    medication_id = data['medication_id']
+    user_id = data['user_id']
+    doses_per_day = data.get('doses_per_day', 1)
+    
+    try:
+        # Get the medication
+        medication = medications_collection.find_one({'_id': ObjectId(medication_id)})
+        
+        if not medication:
+            return jsonify({'error': 'Medication not found'}), 404
+        
+        # Decrement pill count by doses per day
+        current_pills = int(medication.get('pills_remaining', 0))
+        new_count = max(0, current_pills - doses_per_day)
+        
+        medications_collection.update_one(
+            {'_id': ObjectId(medication_id)},
+            {'$set': {'pills_remaining': new_count}}
+        )
+        
+        # Log to history
+        history_collection = db.medication_history
+        history_record = {
+            'user_id': user_id,
+            'medication_id': medication_id,
+            'medication_name': medication['name'],
+            'pills_taken': doses_per_day,
+            'date': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'timestamp': time.time()
+        }
+        history_collection.insert_one(history_record)
+        
+        return jsonify({
+            'message': 'Medication marked as taken',
+            'pills_remaining': new_count
         }), 200
         
     except Exception as e:
