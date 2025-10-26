@@ -14,13 +14,7 @@ void main() async {
   await NotificationService().requestPermissions();
 
   NotificationService().onNotificationTap = (medicationId) {
-    print('=== CALLBACK FIRED IN MAIN ===');
-    print('Medication ID: $medicationId');
-    print('Current User ID: $currentUserId');
-    print('Navigator key has context: ${navigatorKey.currentContext != null}');
-
     if (currentUserId != null) {
-      print('Attempting to navigate to MedicationLogPage');
       navigatorKey.currentState?.push(
         MaterialPageRoute(
           builder: (context) => MedicationLogPage(
@@ -29,10 +23,7 @@ void main() async {
           ),
         ),
       );
-      print('Navigation completed');
-    } else {
-      print('ERROR: currentUserId is null, cannot navigate');
-    }
+    } else {}
   };
 
   runApp(const MyApp());

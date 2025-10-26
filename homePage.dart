@@ -37,7 +37,6 @@ class _HomePageState extends State<HomePage> {
         final data = jsonDecode(response.body);
         final medications = data['medications'] as List;
 
-        // Filter medications for today
         final today = DateTime.now();
         final todaysMeds = medications.where((med) {
           return _isMedicationForToday(med, today);
@@ -77,7 +76,6 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    // Check if this is a time-based schedule with specific days
     if (med['schedule_type'] == 'Time-based') {
       final selectedDays = med['schedule_details']?['selected_days'];
 
@@ -134,7 +132,6 @@ class _HomePageState extends State<HomePage> {
       );
 
       if (response.statusCode == 200) {
-        // Remove medication from today's list
         setState(() {
           _todaysMedications.removeWhere((m) => m['_id'] == medicationId);
         });
@@ -214,12 +211,10 @@ class _HomePageState extends State<HomePage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // PillPal Icon Section
             Container(
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  // Replace with your actual image when ready
                   Container(
                     width: 150,
                     height: 150,

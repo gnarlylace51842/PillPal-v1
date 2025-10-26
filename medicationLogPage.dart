@@ -99,7 +99,6 @@ class _MedicationLogPageState extends State<MedicationLogPage> {
           ),
         );
 
-        // Reload to get updated pill count
         await _loadMedication();
       } else {
         if (!mounted) return;
@@ -137,9 +136,7 @@ class _MedicationLogPageState extends State<MedicationLogPage> {
     final pillsRemaining = _medication!['pills_remaining'] ?? 0;
     final daysRemaining = _getDaysRemaining();
 
-    // Need refill if less than 10 pills remaining
     if (pillsRemaining < 10) {
-      // But only warn if we don't have enough to last until end date
       final dosesPerDay = _getDosesPerDay();
       final pillsNeeded = dosesPerDay * daysRemaining;
 

@@ -48,7 +48,6 @@ class NotificationService {
 
     print('Notification service initialized');
 
-    // Check if app was launched from notification
     final launchDetails = await _notifications
         .getNotificationAppLaunchDetails();
     if (launchDetails?.didNotificationLaunchApp ?? false) {
@@ -56,7 +55,6 @@ class NotificationService {
       final payload = launchDetails!.notificationResponse?.payload;
       print('Launch payload: $payload');
       if (payload != null && payload.isNotEmpty) {
-        // Delay to ensure the app is fully loaded
         Future.delayed(const Duration(milliseconds: 500), () {
           onNotificationTap?.call(payload);
         });
@@ -246,7 +244,6 @@ class NotificationService {
     await _notifications.cancelAll();
   }
 
-  // Debug method to list pending notifications
   Future<void> listPendingNotifications() async {
     final pending = await _notifications.pendingNotificationRequests();
     print('=== PENDING NOTIFICATIONS ===');

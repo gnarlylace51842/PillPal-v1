@@ -94,7 +94,6 @@ class _LoginPageState extends State<LoginPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 20),
-              // PillPal Logo
               Container(
                 width: 120,
                 height: 120,
