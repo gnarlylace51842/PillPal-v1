@@ -34,26 +34,46 @@ class NotificationService {
       onDidReceiveNotificationResponse: (response) {
         print('=== NOTIFICATION TAPPED ===');
         print('Payload received: ${response.payload}');
+        print('Action ID: ${response.actionId}');
+        print('Notification ID: ${response.id}');
+
         if (response.payload != null && response.payload!.isNotEmpty) {
-          print('Calling onNotificationTap callback');
+          print('Calling onNotificationTap callback with: ${response.payload}');
           onNotificationTap?.call(response.payload!);
         } else {
-          print('Payload was null or empty!');
+          print('ERROR: Payload was null or empty!');
         }
       },
     );
 
+    print('Notification service initialized');
+
+    // Check if app was launched from notification
     final launchDetails = await _notifications
         .getNotificationAppLaunchDetails();
     if (launchDetails?.didNotificationLaunchApp ?? false) {
+      print('App launched from notification');
       final payload = launchDetails!.notificationResponse?.payload;
+      print('Launch payload: $payload');
       if (payload != null && payload.isNotEmpty) {
-        onNotificationTap?.call(payload);
+        // Delay to ensure the app is fully loaded
+        Future.delayed(const Duration(milliseconds: 500), () {
+          onNotificationTap?.call(payload);
+        });
       }
     }
   }
 
   Future<bool> requestPermissions() async {
+    final androidPlugin = _notifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+
+    if (androidPlugin != null) {
+      await androidPlugin.requestNotificationsPermission();
+    }
+
     final iosPlugin = _notifications
         .resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin
@@ -77,11 +97,17 @@ class NotificationService {
   }) async {
     await cancelMedicationReminders(medicationId);
 
+    print('=== SCHEDULING NOTIFICATIONS ===');
+    print('Medication ID: $medicationId');
+    print('Medication Name: $medicationName');
+    print('Schedule Type: $scheduleType');
+
     final now = DateTime.now();
     int notificationId = medicationId.hashCode.abs();
 
     if (scheduleType == 'Interval' && intervalHours != null) {
       final timesPerDay = (24 / intervalHours).round();
+      print('Scheduling $timesPerDay notifications for interval schedule');
 
       for (int i = 0; i < timesPerDay; i++) {
         final hour = (i * intervalHours) % 24;
@@ -91,6 +117,7 @@ class NotificationService {
           scheduleTime = scheduleTime.add(const Duration(days: 1));
         }
 
+        print('Scheduling notification $i at $scheduleTime');
         await _scheduleNotification(
           id: notificationId + i,
           title: 'Medication Reminder',
@@ -100,6 +127,9 @@ class NotificationService {
         );
       }
     } else if (scheduleType == 'Time-based' && specificTimes != null) {
+      print(
+        'Scheduling ${specificTimes.length} notifications for time-based schedule',
+      );
       int index = 0;
       for (final timeStr in specificTimes) {
         final time = _parseTime(timeStr.trim());
@@ -116,6 +146,7 @@ class NotificationService {
             scheduleTime = scheduleTime.add(const Duration(days: 1));
           }
 
+          print('Scheduling notification $index at $scheduleTime');
           await _scheduleNotification(
             id: notificationId + index,
             title: 'Medication Reminder',
@@ -128,6 +159,8 @@ class NotificationService {
         }
       }
     }
+
+    print('=== SCHEDULING COMPLETE ===');
   }
 
   Future<void> _scheduleNotification({
@@ -137,7 +170,12 @@ class NotificationService {
     required DateTime scheduledTime,
     required String payload,
   }) async {
-    print('Scheduling notification ID: $id with payload: "$payload"');
+    print('Creating notification:');
+    print('  ID: $id');
+    print('  Title: $title');
+    print('  Body: $body');
+    print('  Payload: "$payload"');
+    print('  Scheduled Time: $scheduledTime');
 
     final tzScheduledTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
@@ -167,7 +205,7 @@ class NotificationService {
       payload: payload,
     );
 
-    print('Notification scheduled successfully');
+    print('  ✓ Notification scheduled successfully');
   }
 
   TimeOfDay? _parseTime(String timeStr) {
@@ -188,18 +226,35 @@ class NotificationService {
 
       return TimeOfDay(hour: hour, minute: minute);
     } catch (e) {
+      print('Error parsing time: $timeStr - $e');
       return null;
     }
   }
 
   Future<void> cancelMedicationReminders(String medicationId) async {
     final baseId = medicationId.hashCode.abs();
+    print(
+      'Cancelling notifications for medication ID: $medicationId (base: $baseId)',
+    );
     for (int i = 0; i < 24; i++) {
       await _notifications.cancel(baseId + i);
     }
   }
 
   Future<void> cancelAllNotifications() async {
+    print('Cancelling all notifications');
     await _notifications.cancelAll();
+  }
+
+  // Debug method to list pending notifications
+  Future<void> listPendingNotifications() async {
+    final pending = await _notifications.pendingNotificationRequests();
+    print('=== PENDING NOTIFICATIONS ===');
+    print('Total: ${pending.length}');
+    for (var notification in pending) {
+      print(
+        'ID: ${notification.id}, Title: ${notification.title}, Payload: ${notification.payload}',
+      );
+    }
   }
 }

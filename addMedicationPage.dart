@@ -34,6 +34,11 @@ class _AddMedicationPageState extends State<AddMedicationPage> {
 
   List<String> _selectedDays = [];
 
+  List<TextEditingController> _titrationWeekControllers = [
+    TextEditingController(),
+    TextEditingController(),
+  ];
+
   final List<String> _medicationForms = [
     'Tablet',
     'Capsule',
@@ -58,16 +63,29 @@ class _AddMedicationPageState extends State<AddMedicationPage> {
     _prescriberController.dispose();
     _intervalController.dispose();
     _timesController.dispose();
+    for (var controller in _titrationWeekControllers) {
+      controller.dispose();
+    }
     super.dispose();
+  }
+
+  void _addTitrationWeek() {
+    setState(() {
+      _titrationWeekControllers.add(TextEditingController());
+    });
+  }
+
+  void _removeTitrationWeek(int index) {
+    setState(() {
+      _titrationWeekControllers[index].dispose();
+      _titrationWeekControllers.removeAt(index);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Add Medication'),
-      ),
+      appBar: AppBar(title: const Text('Add Medication')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -132,7 +150,7 @@ class _AddMedicationPageState extends State<AddMedicationPage> {
               const SizedBox(height: 16),
               TextFormField(
                 decoration: const InputDecoration(
-                  labelText: 'Amount of Medication Remaining',
+                  labelText: 'Pills/Tablets Remaining',
                   border: OutlineInputBorder(),
                   hintText: 'e.g., 30',
                 ),
@@ -277,7 +295,26 @@ class _AddMedicationPageState extends State<AddMedicationPage> {
                 },
               ),
               const SizedBox(height: 24),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.preview),
+                    label: const Text('Preview'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.copy),
+                    label: const Text('Duplicate'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.archive),
+                    label: const Text('Archive'),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
@@ -313,6 +350,13 @@ class _AddMedicationPageState extends State<AddMedicationPage> {
       });
 
       try {
+        List<String> titrationWeeks = [];
+        if (_scheduleType == 'Titration') {
+          titrationWeeks = _titrationWeekControllers
+              .map((controller) => controller.text)
+              .toList();
+        }
+
         final response = await http.post(
           Uri.parse('http://127.0.0.1:5000/add_medication'),
           headers: {'Content-Type': 'application/json'},
@@ -330,6 +374,8 @@ class _AddMedicationPageState extends State<AddMedicationPage> {
                   ? int.tryParse(_intervalController.text)
                   : null,
               'times': _timesController.text,
+              'selected_days': _selectedDays,
+              'titration_weeks': titrationWeeks,
             },
             'start_date': _startDate?.toIso8601String(),
             'end_date': _endDate?.toIso8601String(),
@@ -349,14 +395,9 @@ class _AddMedicationPageState extends State<AddMedicationPage> {
             final medicationData = jsonDecode(response.body);
             final medicationId = medicationData['medication_id'];
 
-            print('Scheduling notifications for: ${_nameController.text}');
-            print('Schedule type: $_scheduleType');
-
             if (_scheduleType == 'Interval' &&
                 _intervalController.text.isNotEmpty) {
               final intervalHours = int.tryParse(_intervalController.text) ?? 8;
-              print('Interval hours: $intervalHours');
-              print('Medication ID to schedule: $medicationId');
 
               await NotificationService().scheduleMedicationReminders(
                 medicationId: medicationId,
@@ -372,8 +413,6 @@ class _AddMedicationPageState extends State<AddMedicationPage> {
                   .split(',')
                   .map((t) => t.trim())
                   .toList();
-              print('Specific times: $times');
-              print('Medication ID to schedule: $medicationId');
 
               await NotificationService().scheduleMedicationReminders(
                 medicationId: medicationId,
@@ -384,8 +423,6 @@ class _AddMedicationPageState extends State<AddMedicationPage> {
                 specificTimes: times,
               );
             }
-
-            print('Notifications scheduled successfully');
           }
 
           if (!mounted) return;
@@ -561,24 +598,33 @@ class _AddMedicationPageState extends State<AddMedicationPage> {
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
-        TextFormField(
-          decoration: const InputDecoration(
-            labelText: 'Week 1 Dosage',
-            border: OutlineInputBorder(),
-            hintText: 'e.g., 1 tablet',
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          decoration: const InputDecoration(
-            labelText: 'Week 2 Dosage',
-            border: OutlineInputBorder(),
-            hintText: 'e.g., 2 tablets',
-          ),
-        ),
+        ...List.generate(_titrationWeekControllers.length, (index) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _titrationWeekControllers[index],
+                    decoration: InputDecoration(
+                      labelText: 'Week ${index + 1} Dosage',
+                      border: const OutlineInputBorder(),
+                      hintText: 'e.g., ${index + 1} tablet(s)',
+                    ),
+                  ),
+                ),
+                if (_titrationWeekControllers.length > 2)
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle, color: Colors.red),
+                    onPressed: () => _removeTitrationWeek(index),
+                  ),
+              ],
+            ),
+          );
+        }),
         const SizedBox(height: 8),
         TextButton.icon(
-          onPressed: () {},
+          onPressed: _addTitrationWeek,
           icon: const Icon(Icons.add),
           label: const Text('Add more weeks'),
         ),

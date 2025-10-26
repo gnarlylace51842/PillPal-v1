@@ -142,7 +142,6 @@ class _CurrentMedicationsPageState extends State<CurrentMedicationsPage> {
           }
         }
 
-        // If all doses today have passed, show tomorrow's first dose
         if (times.isNotEmpty) {
           final firstTime = _parseTime(times.first.trim());
           if (firstTime != null) {

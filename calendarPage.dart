@@ -86,6 +86,28 @@ class _CalendarPageState extends State<CalendarPage> {
       }
     }
 
+    if (med['schedule_type'] == 'Time-based') {
+      final selectedDays = med['schedule_details']?['selected_days'];
+
+      if (selectedDays != null &&
+          selectedDays is List &&
+          selectedDays.isNotEmpty) {
+        final weekdayNames = [
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+          'Sunday',
+        ];
+
+        final dayName = weekdayNames[date.weekday - 1];
+
+        return selectedDays.contains(dayName);
+      }
+    }
+
     return true;
   }
 
@@ -94,6 +116,12 @@ class _CalendarPageState extends State<CalendarPage> {
       final intervalHours = med['schedule_details']?['interval_hours'];
       if (intervalHours != null) {
         return (24 / intervalHours).round();
+      }
+    } else if (med['schedule_type'] == 'Time-based') {
+      final timesStr = med['schedule_details']?['times'];
+      if (timesStr != null && timesStr.toString().isNotEmpty) {
+        final times = timesStr.toString().split(',');
+        return times.length;
       }
     }
     return 1;
@@ -121,7 +149,6 @@ class _CalendarPageState extends State<CalendarPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Calendar'),
         actions: [
           PopupMenuButton<String>(

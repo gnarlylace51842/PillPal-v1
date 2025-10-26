@@ -49,18 +49,39 @@ class _MedicationLogPageState extends State<MedicationLogPage> {
     }
   }
 
+  int _getDosesPerDay() {
+    if (_medication == null) return 1;
+
+    if (_medication!['schedule_type'] == 'Interval') {
+      final intervalHours = _medication!['schedule_details']?['interval_hours'];
+      if (intervalHours != null) {
+        return (24 / intervalHours).round();
+      }
+    } else if (_medication!['schedule_type'] == 'Time-based') {
+      final timesStr = _medication!['schedule_details']?['times'];
+      if (timesStr != null && timesStr.toString().isNotEmpty) {
+        final times = timesStr.toString().split(',');
+        return times.length;
+      }
+    }
+    return 1;
+  }
+
   Future<void> _logMedication() async {
     setState(() {
       _isLogging = true;
     });
 
+    final dosesPerDay = _getDosesPerDay();
+
     try {
       final response = await http.post(
-        Uri.parse('http://127.0.0.1:5000/log_medication'),
+        Uri.parse('http://127.0.0.1:5000/mark_medication_taken'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'medication_id': widget.medicationId,
           'user_id': widget.userId,
+          'doses_per_day': dosesPerDay,
         }),
       );
 
@@ -72,9 +93,13 @@ class _MedicationLogPageState extends State<MedicationLogPage> {
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Medication logged successfully!')),
+          const SnackBar(
+            content: Text('Medication logged successfully!'),
+            backgroundColor: Colors.green,
+          ),
         );
 
+        // Reload to get updated pill count
         await _loadMedication();
       } else {
         if (!mounted) return;
@@ -109,14 +134,13 @@ class _MedicationLogPageState extends State<MedicationLogPage> {
   bool _needsRefill() {
     if (_medication == null) return false;
 
-    final pillsRemaining =
-        int.tryParse(_medication!['pills_remaining']?.toString() ?? '0') ?? 0;
+    final pillsRemaining = _medication!['pills_remaining'] ?? 0;
     final daysRemaining = _getDaysRemaining();
 
+    // Need refill if less than 10 pills remaining
     if (pillsRemaining < 10) {
-      final intervalHours =
-          _medication!['schedule_details']?['interval_hours'] ?? 24;
-      final dosesPerDay = (24 / intervalHours).round();
+      // But only warn if we don't have enough to last until end date
+      final dosesPerDay = _getDosesPerDay();
       final pillsNeeded = dosesPerDay * daysRemaining;
 
       return pillsRemaining < pillsNeeded;
@@ -128,10 +152,7 @@ class _MedicationLogPageState extends State<MedicationLogPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Log Medication'),
-      ),
+      appBar: AppBar(title: const Text('Log Medication')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _medication == null
@@ -205,7 +226,13 @@ class _MedicationLogPageState extends State<MedicationLogPage> {
                     icon: Icons.inventory,
                     title: 'Pills Remaining',
                     content:
-                        '${_medication!['pills_remaining'] ?? 'Unknown'} left',
+                        '${_medication!['pills_remaining'] ?? 0} pills left',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildInfoCard(
+                    icon: Icons.medication_liquid,
+                    title: 'Doses Per Day',
+                    content: '${_getDosesPerDay()} dose(s) per day',
                   ),
                   const SizedBox(height: 16),
                   _buildInfoCard(

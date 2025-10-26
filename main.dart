@@ -14,7 +14,7 @@ void main() async {
   await NotificationService().requestPermissions();
 
   NotificationService().onNotificationTap = (medicationId) {
-    print('Callback fire in MAIN');
+    print('=== CALLBACK FIRED IN MAIN ===');
     print('Medication ID: $medicationId');
     print('Current User ID: $currentUserId');
     print('Navigator key has context: ${navigatorKey.currentContext != null}');
